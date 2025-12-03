@@ -2,7 +2,7 @@
 -- что и сотрудник с идентификатором 169. Список должен содержать имя и фамилию, оклад, идентификаторы отдела и должности.
 
 
-select * from employees where job_id in (select job_id from employees where employee_id = 169);
+select * from employees where job_id = (select job_id from employees where employee_id = 169);
 
 
 
