@@ -16,6 +16,8 @@ class Vacancy:
     url: str
     source: str  # hh.ru или superjob.ru и т.п.
 
+api_url = "https://api.hh.ru/vacancies"
+
 
 def parse_salary_hh(s: Optional[str]) -> tuple[Optional[int], Optional[int], Optional[str]]:
     if not s:
@@ -45,15 +47,17 @@ def parse_salary_hh(s: Optional[str]) -> tuple[Optional[int], Optional[int], Opt
     return None, None, currency
 
 
-def fetch_hh_vacancies(query: str, pages: int) -> List[Vacancy]:
+def fetch_hh_vacancies_html(query: str, pages: int) -> List[Vacancy]:
+    """
+    Получение вакансий с hh.ru парсингом HTML (XPath + lxml).
+    Используется в 2‑й лабораторной для демонстрации работы с DOM/XPath.
+    """
     vacancies: List[Vacancy] = []
 
     base_url = "https://hh.ru/search/vacancy"
     headers = {
         "User-Agent": "Mozilla/5.0 (compatible; MSN-lab2-bot/1.0)",
     }
-
-    total_added = 0
 
     for page in range(pages):
         params = {
@@ -102,45 +106,53 @@ def fetch_hh_vacancies(query: str, pages: int) -> List[Vacancy]:
                     source="hh.ru",
                 )
             )
-            total_added += 1
-
-    if total_added == 0:
-        print("По HTML-разметке вакансии не найдены, пробую официальный API hh.ru...")
-        api_url = "https://api.hh.ru/vacancies"
-        for page in range(pages):
-            params = {
-                "text": query,
-                "page": page,
-                "per_page": 20,
-            }
-            print(f"Загружаю страницу {page + 1} через API hh.ru ...")
-            resp = requests.get(api_url, params=params, headers=headers)
-            if resp.status_code != 200:
-                print(f"Не удалось загрузить данные API для страницы {page + 1}: HTTP {resp.status_code}")
-                break
-
-            data = resp.json()
-            for item in data.get("items", []):
-                title = (item.get("name") or "").strip()
-                url = item.get("alternate_url") or ""
-
-                salary_obj = item.get("salary") or {}
-                salary_min = salary_obj.get("from")
-                salary_max = salary_obj.get("to")
-                currency = salary_obj.get("currency")
-
-                vacancies.append(
-                    Vacancy(
-                        title=title,
-                        salary_min=salary_min,
-                        salary_max=salary_max,
-                        currency=currency,
-                        url=url,
-                        source="hh.ru",
-                    )
-                )
 
     return vacancies
+
+
+def fetch_vacancies(query: str, pages: int, per_page: int = 20) -> List[Vacancy]:
+    vacancies: List[Vacancy] = []
+
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (compatible; MSN-lab2-bot/1.0)",
+    }
+
+    for page in range(pages):
+        params = {
+            "text": query,
+            "page": page,
+            "per_page": per_page,
+        }
+        print(f"Загружаю страницу {page + 1} hh.ru ...")
+        resp = requests.get(api_url, params=params, headers=headers)
+        if resp.status_code != 200:
+            print(f"Не удалось загрузить данные API для страницы {page + 1}: HTTP {resp.status_code}")
+            break
+
+        data = resp.json()
+        for item in data.get("items", []):
+            title = (item.get("name") or "").strip()
+            url = item.get("alternate_url") or ""
+
+            salary_obj = item.get("salary") or {}
+            salary_min = salary_obj.get("from")
+            salary_max = salary_obj.get("to")
+            currency = salary_obj.get("currency")
+
+            vacancies.append(
+                Vacancy(
+                    title=title,
+                    salary_min=salary_min,
+                    salary_max=salary_max,
+                    currency=currency,
+                    url=url,
+                    source="hh.ru",
+                )
+            )
+
+    return vacancies
+
 
 
 def main():
@@ -159,7 +171,7 @@ def main():
         print("Число страниц должно быть положительным.")
         return
 
-    vacancies = fetch_hh_vacancies(query, pages)
+    vacancies = fetch_hh_vacancies_html(query, pages)
     print(f"Найдено вакансий: {len(vacancies)}")
 
     data = [asdict(v) for v in vacancies]

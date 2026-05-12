@@ -1,98 +1,79 @@
 import qubit.Matrix;
 import qubit.QuantumRegister;
+import qubit.Qubit;
 
 public class Lab4 {
 
-    /**
-     * Удобный хелпер: строим таблицу булевой функции f(x1, x2) по четырём значениям f(0,0)..f(1,1).
-     * Порядок: f00, f01, f10, f11.
-     */
-    private static boolean[][] truthTable(boolean f00, boolean f01, boolean f10, boolean f11) {
-        return new boolean[][]{
-                {f00, f01, f10, f11}
+
+    public static void first(){
+        boolean[][] table = new boolean[][]{
+                {false, false, false, true}
         };
+        // A and B
+
+        Matrix matrixToMult = Matrix.fromBooleanTable(2, 1, table);
+        var register = QuantumRegister.fromQubits(new Qubit[]{
+            Qubit.fromState(Qubit.QubitState.ZERO), 
+            Qubit.fromState(Qubit.QubitState.PLUS), 
+            Qubit.fromState(Qubit.QubitState.PLUS)});
+            
+        System.out.println("До преобразования");
+        register.printStateNotation();
+        register.applyFunctionMatrix(matrixToMult.data());
+
+        System.out.println("После преобразования");
+        register.printStateNotation();
+
     }
 
-    /**
-     * Моделирование «квантового параллелизма»: входы в состоянии |+⟩|+⟩, вспомогательный кубит |1⟩,
-     * единичный оператор f применяется сразу ко всем четырём наборам входных переменных.
-     */
-    private static void demonstrateParallelism(String name, boolean[][] table) {
-        System.out.println("\n=== Эффект квантового параллелизма для функции " + name + " ===");
 
-        // |001⟩: x1=0, x2=0, y=1
+    public static void second(){
         QuantumRegister register = QuantumRegister.fromBitString("001");
 
-        System.out.println("Начальное состояние регистра (перед Адамаром):");
+        System.out.println("Состояние регистра до преобразования:");
         register.printStateNotation();
 
-        // Применяем H к трём кубитам: получаем суперпозицию по x1,x2 и |-> по y
+        // Применяем преобразование Адамара ко всем трём кубитам
         register.applyHadamardFirstN(3);
-        System.out.println("Состояние после применения преобразования Адамара ко всем трём кубитам:");
+        System.out.println("Состояние регистра после применения Адамара к 3 кубитам:");
         register.printStateNotation();
 
-        // Оракул f(x1,x2)
-        Matrix oracle = Matrix.fromBooleanTable(2, 1, table);
-        register.applyFunctionMatrix(oracle.data());
+        // Строим матрицу по таблице {0, 1, 0, 1}
+        boolean[][] table = new boolean[][]{
+                {false, true, false, true}
+        };
 
-        System.out.println("Состояние после применения унитарного оператора, реализующего f(x1, x2):");
+        Matrix matrixToMult = Matrix.fromBooleanTable(2, 1, table);
+
+        System.out.println("Матрица преобразования F:");
+        System.out.println(matrixToMult);
+
+        // Применяем унитарный оператор к регистру
+        register.applyFunctionMatrix(matrixToMult.data());
+
+        System.out.println("Состояние регистра после применения матрицы:");
         register.printStateNotation();
-    }
 
-    /**
-     * Моделирование алгоритма Дойча–Йожи для конкретной булевой функции.
-     * После применения H–f–H к первым двум кубитам измеряем их и смотрим, получился ли результат 00.
-     */
-    private static void demonstrateDeutschJozsa(String name, boolean[][] table) {
-        System.out.println("\n=== Алгоритм Дойча–Йожи для функции " + name + " ===");
-
-        QuantumRegister register = QuantumRegister.fromBitString("001");
-
-        // Подготовка входов в |+⟩, выхода в |−⟩
-        register.applyHadamardFirstN(3);
-
-        // Оракул f
-        Matrix oracle = Matrix.fromBooleanTable(2, 1, table);
-        register.applyFunctionMatrix(oracle.data());
-
-        // H только на двух входных кубитах
+        // Снова применяем преобразование Адамара к первым двум (старшим) кубитам
         register.applyHadamardFirstN(2);
 
-        System.out.println("Состояние регистра перед измерением (скобочная нотация):");
+        System.out.println("Состояние регистра после применения матрицы и повторного Адамара:");
         register.printStateNotation();
 
+        // Измеряем регистр и выводим результат сдвига вправо на 1 (деление на 2, отброс младшего бита)
         int measuredState = register.measure();
-        int twoHighBits = measuredState >> 1;
-        System.out.println("Результат измерения (два старших бита): " + twoHighBits);
+        int result = measuredState >> 1;
 
-        if (twoHighBits == 0) {
-            System.out.println("Алгоритм Дойча–Йожи говорит: функция КОНСТАНТНАЯ.");
-        } else {
-            System.out.println("Алгоритм Дойча–Йожи говорит: функция СБАЛАНСИРОВАННАЯ.");
-        }
+        System.out.println("Классический результат измерения (state >> 1): " + result);
+
     }
 
     public static void main(String[] args) {
-        System.out.println("=== Лабораторная работа 4: квантовый параллелизм и задача Дойча–Йожи ===");
+        System.out.println("=== ПЕРВЫЙ ПУНКТ ===");
+        first();
+        System.out.println("=== ВТОРОЙ ПУНКТ ===");
+        second();
 
-        // 1. Эффект квантового параллелизма для разных булевых функций f(x1, x2)
-        boolean[][] constZero = truthTable(false, false, false, false);
-        boolean[][] constOne = truthTable(true, true, true, true);
-        boolean[][] balancedXor = truthTable(false, true, true, false);   // XOR
-        boolean[][] balancedAlt = truthTable(false, true, false, true);   // 0,1,0,1
-
-        demonstrateParallelism("f_const0(x1,x2)=0", constZero);
-        demonstrateParallelism("f_const1(x1,x2)=1", constOne);
-        demonstrateParallelism("f_xor(x1,x2)=x1 XOR x2", balancedXor);
-        demonstrateParallelism("f_alt(x1,x2) = {0,1,0,1}", balancedAlt);
-
-        // 2. Алгоритм Дойча–Йожи: константные и сбалансированные функции
-        demonstrateDeutschJozsa("f_const0(x1,x2)=0 (константная)", constZero);
-        demonstrateDeutschJozsa("f_xor(x1,x2)=x1 XOR x2 (сбалансированная)", balancedXor);
-
-        // 3. Функция, которая НИ константная, НИ сбалансированная (например, 0,0,0,1)
-        boolean[][] neitherConstNorBalanced = truthTable(false, false, false, true);
-        demonstrateDeutschJozsa("f_mixed(x1,x2) = {0,0,0,1} (ни константная, ни сбалансированная)", neitherConstNorBalanced);
     }
 }
 
