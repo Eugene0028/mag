@@ -1,0 +1,7 @@
+# Строка 1: путь к файлу сообщения (относительно каталога запуска или абсолютный)
+HarryPotter5.txt
+# Далее по одной строке на набор: ИМЯ|КАТАЛОГ|5_файлов_через_запятую|файл_для_внедрения_k1_k2_k3
+# Пять файлов — для визуализации всех плоскостей (п. a). Для MEDICAL/OTHER при нехватке снимков временно можно дублировать имена; для отчёта лучше заменить на пять разных.
+BOSSBASE|container1|1.bmp,2.bmp,3.bmp,4.bmp,5.bmp|1.bmp
+MEDICAL|container2|med_0.bmp,med_0.bmp,med_0.bmp,med_0.bmp,med_0.bmp|med_0.bmp
+OTHER|container3|sat_12.bmp,sat_12.bmp,sat_12.bmp,sat_12.bmp,sat_12.bmp|sat_12.bmp
