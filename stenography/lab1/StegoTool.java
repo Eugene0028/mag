@@ -18,7 +18,7 @@ public class StegoTool {
             int mode = sc.nextInt();
             sc.nextLine();
 
-            System.out.print("Path to BMP (e.g., container1bmp/t1.bmp): ");
+            System.out.print("Path to BMP (e.g., ..\\container1\\1.bmp): ");
             String imgPath = sc.nextLine();
 
             System.out.print("Bit number k (1-8, 1 is LSB): ");
@@ -116,7 +116,7 @@ public class StegoTool {
             }
         }
         ImageIO.write(img, "bmp", new File("stego_result.bmp"));
-        System.out.println("Success write " + totalBits + " bits in stego_result.bmp");
+        System.out.println("Success write " + totalBits + " bits (" + (totalBits / 8) + " full bytes) in stego_result.bmp");
     }
 
     // 3) Извлечение сообщения

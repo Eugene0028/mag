@@ -1,2 +1,6 @@
 *.class
 .idea
+research_out/
+extracted.txt
+stego_result.bmp
+plane_*.bmp

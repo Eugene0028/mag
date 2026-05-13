@@ -5,22 +5,28 @@ import java.awt.image.BufferedImage;
 import java.awt.image.WritableRaster;
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.nio.file.DirectoryStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
+import java.util.stream.Stream;
 import javax.imageio.ImageIO;
 
 /**
  * Исследовательская часть: пакетная визуализация битовых плоскостей, внедрение при k=1..3,
  * MSE, PSNR, SSIM, гистограммы и CSV для таблиц сравнения.
  * <p>
- * Запуск из каталога stenography (или укажите абсолютные пути в конфиге):
+ * Запуск из каталога lab1:
  * {@code javac StegoResearch.java && java StegoResearch}
  * <p>
  * По умолчанию читается {@code research_config.txt} в текущей директории.
+ * Относительные пути в конфиге считаются от расположения самого конфига.
  * Первая непустая строка (не комментарий #) — путь к файлу сообщения.
  * Далее строки: ИМЯ_НАБОРА|КАТАЛОГ|f1.bmp,...,f5.bmp|файл_для_внедрения.bmp
  */
@@ -40,10 +46,15 @@ public final class StegoResearch {
     public static void main(String[] args) throws IOException {
         Path cwd = Path.of("").toAbsolutePath();
         Path configPath = cwd.resolve(args.length > 0 ? args[0] : DEFAULT_CONFIG);
+        configPath = configPath.normalize();
         if (!Files.isRegularFile(configPath)) {
             System.err.println("Нет файла конфигурации: " + configPath);
             System.err.println("Создайте " + DEFAULT_CONFIG + " по образцу из репозитория.");
             return;
+        }
+        Path configDir = configPath.getParent();
+        if (configDir == null) {
+            configDir = cwd;
         }
         List<String> lines = Files.readAllLines(configPath, StandardCharsets.UTF_8);
         List<String> effective = new ArrayList<>();
@@ -57,27 +68,36 @@ public final class StegoResearch {
         if (effective.size() < 4) {
             throw new IOException("В конфиге нужны: сообщение + 3 строки наборов.");
         }
-        Path msgPath = cwd.resolve(effective.get(0));
+        Path msgPath = resolveConfigPath(configDir, effective.get(0));
         byte[] message = Files.readAllBytes(msgPath);
 
-        Path outRoot = cwd.resolve(OUT_ROOT);
+        Path outRoot = configDir.resolve(OUT_ROOT);
         Files.createDirectories(outRoot);
 
         Path metricsCsv = outRoot.resolve("metrics_all.csv");
         Path entropyCsv = outRoot.resolve("bitplane_entropy_all.csv");
+        Path summaryCsv = outRoot.resolve("dataset_summary.csv");
 
         try (BufferedWriter mw = Files.newBufferedWriter(metricsCsv, StandardCharsets.UTF_8);
-             BufferedWriter ew = Files.newBufferedWriter(entropyCsv, StandardCharsets.UTF_8)) {
+             BufferedWriter ew = Files.newBufferedWriter(entropyCsv, StandardCharsets.UTF_8);
+             BufferedWriter sw = Files.newBufferedWriter(summaryCsv, StandardCharsets.UTF_8)) {
             mw.write("set;rep_image;k;MSE;PSNR_dB;SSIM");
             mw.newLine();
             ew.write("set;image;k;p0;p1;entropy_bits");
             ew.newLine();
+            sw.write("set;directory;bmp_count;plane_files;rep_image");
+            sw.newLine();
 
             for (int si = 1; si <= 3; si++) {
-                SetSpec spec = SetSpec.parse(effective.get(si), cwd);
-                System.out.println("Набор: " + spec.name + " -> " + spec.dir);
+                SetSpec spec = SetSpec.parse(effective.get(si), configDir);
+                int bmpCount = validateSetSpec(spec);
+                System.out.println("Набор: " + spec.name + " -> " + spec.dir + " (" + bmpCount + " BMP)");
+                sw.write(String.format(Locale.ROOT, "%s;%s;%d;%s;%s",
+                        spec.name, spec.dir, bmpCount, String.join(",", spec.planeFiles), spec.repFile));
+                sw.newLine();
 
                 Path setOut = outRoot.resolve(safeName(spec.name));
+                deleteTreeIfExists(setOut);
                 Path planesRoot = setOut.resolve("planes");
                 Path stegoRoot = setOut.resolve("stego");
                 Path histRoot = setOut.resolve("hist");
@@ -128,7 +148,7 @@ public final class StegoResearch {
             }
         }
         System.out.println("Готово. Результаты в каталоге: " + outRoot.toAbsolutePath());
-        System.out.println("Таблицы: metrics_all.csv, bitplane_entropy_all.csv");
+        System.out.println("Таблицы: metrics_all.csv, bitplane_entropy_all.csv, dataset_summary.csv");
     }
 
     private static final class SetSpec {
@@ -144,23 +164,85 @@ public final class StegoResearch {
             this.repFile = repFile;
         }
 
-        static SetSpec parse(String line, Path cwd) {
+        static SetSpec parse(String line, Path configDir) {
             String[] parts = line.split("\\|");
             if (parts.length != 4) {
                 throw new IllegalArgumentException("Строка набора должна быть: ИМЯ|КАТАЛОГ|f1,...,f5|rep.bmp — " + line);
             }
             String name = parts[0].trim();
-            Path dir = cwd.resolve(parts[1].trim());
+            Path dir = resolveConfigPath(configDir, parts[1].trim());
             String[] fs = parts[2].trim().split(",");
             if (fs.length != 5) {
                 throw new IllegalArgumentException("Нужно ровно 5 файлов через запятую: " + line);
             }
             List<String> files = new ArrayList<>();
+            Set<String> unique = new HashSet<>();
             for (String f : fs) {
-                files.add(f.trim());
+                String file = f.trim();
+                if (!unique.add(file)) {
+                    throw new IllegalArgumentException("Файлы для визуализации должны быть разными: " + line);
+                }
+                files.add(file);
             }
             String rep = parts[3].trim();
             return new SetSpec(name, dir, files, rep);
+        }
+    }
+
+    private static Path resolveConfigPath(Path configDir, String raw) {
+        Path p = Path.of(raw);
+        if (p.isAbsolute()) {
+            return p.normalize();
+        }
+        return configDir.resolve(p).normalize();
+    }
+
+    private static int validateSetSpec(SetSpec spec) throws IOException {
+        if (!Files.isDirectory(spec.dir)) {
+            throw new IOException("Нет каталога набора " + spec.name + ": " + spec.dir);
+        }
+        int bmpCount = 0;
+        try (DirectoryStream<Path> ds = Files.newDirectoryStream(spec.dir, "*.bmp")) {
+            for (Path bmp : ds) {
+                if (Files.isRegularFile(bmp)) {
+                    bmpCount++;
+                }
+            }
+        }
+        if (bmpCount < 100) {
+            throw new IOException("В наборе " + spec.name + " найдено только " + bmpCount + " BMP, нужно не меньше 100.");
+        }
+        for (String file : spec.planeFiles) {
+            ensureRegularFile(spec.dir.resolve(file), "файл для битовых плоскостей");
+        }
+        ensureRegularFile(spec.dir.resolve(spec.repFile), "репрезентативный файл для внедрения");
+        return bmpCount;
+    }
+
+    private static void ensureRegularFile(Path path, String role) throws IOException {
+        if (!Files.isRegularFile(path)) {
+            throw new IOException("Не найден " + role + ": " + path);
+        }
+    }
+
+    private static void deleteTreeIfExists(Path root) throws IOException {
+        if (!Files.exists(root)) {
+            return;
+        }
+        try (Stream<Path> paths = Files.walk(root)) {
+            paths.sorted(Comparator.reverseOrder())
+                    .forEach(path -> {
+                        try {
+                            Files.delete(path);
+                        } catch (IOException e) {
+                            throw new RuntimeException("Не удалось удалить старый результат: " + path, e);
+                        }
+                    });
+        } catch (RuntimeException e) {
+            if (e.getCause() instanceof IOException) {
+                throw (IOException) e.getCause();
+            }
+            throw e;
         }
     }
 
@@ -168,6 +250,10 @@ public final class StegoResearch {
         BufferedImage img = ImageIO.read(path.toFile());
         if (img == null) {
             throw new IOException("Не удалось прочитать: " + path);
+        }
+        if (img.getWidth() != 512 || img.getHeight() != 512) {
+            throw new IOException("Изображение должно быть 512x512: " + path
+                    + " (" + img.getWidth() + "x" + img.getHeight() + ")");
         }
         return toByteGray(img);
     }

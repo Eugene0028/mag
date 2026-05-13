@@ -1,5 +1,39 @@
-javac StegoTool.java
-java StegoTool
+Лабораторная работа 1 — битовые плоскости и LSB-встраивание.
 
-javac StegoResearch.java
+## Состав
+
+- `StegoTool.java` — интерактивная программа:
+  - извлечение выбранной битовой плоскости `k=1..8`;
+  - внедрение текста из файла в выбранную плоскость;
+  - извлечение заданного числа бит из выбранной плоскости.
+- `StegoResearch.java` — пакетная исследовательская часть:
+  - проверяет, что в каждом наборе есть не меньше 100 BMP;
+  - строит 8 битовых плоскостей для 5 разных файлов каждого набора;
+  - внедряет одно сообщение в `k=1,2,3`;
+  - считает `MSE`, `PSNR`, `SSIM`, гистограммы, карты разницы и CSV-таблицы.
+- `research_config.txt` — конфигурация наборов и файла сообщения.
+
+## Запуск из каталога `lab1`
+
+```powershell
+javac -encoding UTF-8 StegoTool.java StegoResearch.java
+java StegoTool
 java StegoResearch
+```
+
+Для интерактивного режима примеры путей к контейнерам:
+
+```text
+..\container1\1.bmp
+..\container2\med_0.bmp
+..\container3\sat_12.bmp
+```
+
+## Результаты исследования
+
+После `java StegoResearch` результаты сохраняются в `research_out`:
+
+- `dataset_summary.csv` — количество BMP в каждом наборе и выбранные файлы;
+- `metrics_all.csv` — `MSE`, `PSNR`, `SSIM` для `k=1,2,3`;
+- `bitplane_entropy_all.csv` — доли нулей/единиц и энтропия битовых плоскостей;
+- `BOSSBASE`, `MEDICAL`, `OTHER` — подпапки с `planes`, `stego`, `hist`, `diff`.

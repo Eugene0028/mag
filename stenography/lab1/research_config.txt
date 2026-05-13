@@ -1,7 +1,7 @@
-# Строка 1: путь к файлу сообщения (относительно каталога запуска или абсолютный)
+# Строка 1: путь к файлу сообщения (относительно этого файла конфигурации или абсолютный)
 HarryPotter5.txt
 # Далее по одной строке на набор: ИМЯ|КАТАЛОГ|5_файлов_через_запятую|файл_для_внедрения_k1_k2_k3
-# Пять файлов — для визуализации всех плоскостей (п. a). Для MEDICAL/OTHER при нехватке снимков временно можно дублировать имена; для отчёта лучше заменить на пять разных.
-BOSSBASE|container1|1.bmp,2.bmp,3.bmp,4.bmp,5.bmp|1.bmp
-MEDICAL|container2|med_0.bmp,med_0.bmp,med_0.bmp,med_0.bmp,med_0.bmp|med_0.bmp
-OTHER|container3|sat_12.bmp,sat_12.bmp,sat_12.bmp,sat_12.bmp,sat_12.bmp|sat_12.bmp
+# Пять файлов должны быть разными: они используются для визуализации всех плоскостей (п. a).
+BOSSBASE|../container1|1.bmp,2.bmp,3.bmp,4.bmp,5.bmp|1.bmp
+MEDICAL|../container2|med_0.bmp,med_1.bmp,med_2.bmp,med_3.bmp,med_10.bmp|med_0.bmp
+OTHER|../container3|sat_12.bmp,sat_13.bmp,sat_14.bmp,sat_15.bmp,sat_16.bmp|sat_12.bmp
