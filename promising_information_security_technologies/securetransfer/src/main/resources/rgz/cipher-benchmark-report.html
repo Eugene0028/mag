@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>РГЗ — сравнение потоковых шифров</title>
+  <style>
+    :root { color-scheme: light; font-family: system-ui, sans-serif; color: #17213b; background: #eef1f6; }
+    body { max-width: 1180px; margin: 36px auto; padding: 0 20px; line-height: 1.6; }
+    header, section { background: white; border: 1px solid #dce2ee; border-radius: 12px; padding: 24px; margin-bottom: 20px; }
+    h1, h2 { line-height: 1.25; } h1 { margin-top: 0; } h2 { font-size: 1.25rem; }
+    .date { color: #58657d; } .table-scroll { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    th, td { padding: 10px; text-align: left; border-bottom: 1px solid #e2e7ef; }
+    th { background: #f1f4f9; } td:nth-child(n+3) { text-align: right; font-variant-numeric: tabular-nums; }
+    pre { overflow: auto; max-height: 350px; font-size: 0.8rem; padding: 14px; background: #f1f4f9; }
+    a { color: #1e54a5; } code { background: #f1f4f9; padding: 2px 4px; }
+    @media print { body { max-width: none; margin: 0; padding: 0; background: white; } section, header { border: 0; } details { display: none; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Сравнение четырёх потоковых шифров</h1>
+    <p>HC-128 · Rabbit · Salsa20/20 · Sosemanuk</p>
+    <p class="date">Локальное время формирования: {{DATE}}</p>
+  </header>
+  <section>
+    <h2>Условия эксперимента</h2>
+    {{ENVIRONMENT}}
+    <p>Реализации: HC-128 и Salsa20 — Bouncy Castle 1.86; Sosemanuk — eSTREAMJ 2.0.0;
+      Rabbit — исходный код проекта по <a href="https://www.rfc-editor.org/rfc/rfc4503.html">RFC 4503</a>.</p>
+  </section>
+  <section>
+    <h2>Что измеряется</h2>
+    <ul>
+      <li><strong>Полная инициализация:</strong> новый объект, подготовка ключа и IV.
+        Это общий этап для сравнения всех четырёх реализаций.</li>
+      <li><strong>Подготовка ключа и установка IV:</strong> отдельные вызовы Rabbit и Sosemanuk.
+        У HC-128 и Salsa20 API Bouncy Castle объединяет эти операции; раздельные значения отсутствуют.</li>
+      <li><strong>Генерация потока:</strong> обработка заранее выделенного нулевого буфера через XOR
+        и запись результата в готовый буфер. Состояние продолжается между операциями;
+        подготовка ключа и IV выполняется до начала этого этапа.</li>
+    </ul>
+    <p>Случайные входы, выделение буферов потока, файлы и консольный вывод находятся вне измеряемых
+      интервалов. Общий исполнитель сохраняет результаты операций для наблюдаемости вычислений;
+      это учебная методика без изоляции JVM, предоставляемой JMH.</p>
+    <p>Циклы серии делятся на число операций. Для потока медиана дополнительно делится на размер
+      порции в байтах. Служебные затраты не вычитаются. Отдельные этапы не обязаны в сумме равняться
+      полной инициализации: отличаются создание объектов и условия исполнения.</p>
+  </section>
+  <section>
+    <h2>Результаты из CSV</h2>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Шифр</th><th>Этап</th><th>Медиана, цикл/оп.</th><th>Среднее, цикл/оп.</th>
+          <th>Минимум, цикл/оп.</th><th>Максимум, цикл/оп.</th><th>Медиана, цикл/байт</th></tr></thead>
+        <tbody>{{ROWS}}</tbody>
+      </table>
+    </div>
+    <p>Пустая операция тем же способом: медиана {{OVERHEAD}} цикл/операцию.</p>
+  </section>
+  <section>
+    <h2>Вывод по этому запуску</h2>
+    {{CONCLUSION}}
+  </section>
+  <section>
+    <h2>Исходные данные</h2>
+    <p><a href="measurements.csv" download>Скачать measurements.csv</a>. Копия данных включена ниже.
+      Колонка <code>cycles</code> содержит целые циклы всей серии из <code>operations</code> операций.</p>
+    <details><summary>Показать исходные измерения</summary><pre>{{RAW_CSV}}</pre></details>
+  </section>
+</body>
+</html>

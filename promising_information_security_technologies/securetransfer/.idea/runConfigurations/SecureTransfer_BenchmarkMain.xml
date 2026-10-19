@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="SecureTransfer - BenchmarkMain" type="Application" factoryName="Application">
-    <option name="MAIN_CLASS_NAME" value="securetransfer.BenchmarkMain" />
+    <option name="MAIN_CLASS_NAME" value="securetransfer.lab1.BenchmarkMain" />
     <module name="securetransfer" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
     <method v="2">

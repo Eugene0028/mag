@@ -19,5 +19,27 @@
         <SOURCES />
       </library>
     </orderEntry>
+    <orderEntry type="module-library">
+      <library name="Bouncy Castle 1.86">
+        <CLASSES>
+          <root url="jar://$MODULE_DIR$/lib/bcprov-jdk18on-1.86.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES>
+          <root url="jar://$MODULE_DIR$/lib/bcprov-jdk18on-1.86-sources.jar!/" />
+        </SOURCES>
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library">
+      <library name="eSTREAMJ 2.0.0">
+        <CLASSES>
+          <root url="jar://$MODULE_DIR$/lib/estreamj-2.0.0.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES>
+          <root url="jar://$MODULE_DIR$/lib/estreamj-2.0.0-sources.jar!/" />
+        </SOURCES>
+      </library>
+    </orderEntry>
   </component>
 </module>

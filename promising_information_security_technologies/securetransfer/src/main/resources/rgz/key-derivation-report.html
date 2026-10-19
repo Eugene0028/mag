@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>РГЗ — SHA3-256 и получение ключа MQV</title>
+  <style>
+    :root { font-family: system-ui, sans-serif; color: #17213b; background: #eef1f6; }
+    body { max-width: 1180px; margin: 36px auto; padding: 0 20px; line-height: 1.6; }
+    header, section { background: white; border: 1px solid #dce2ee; border-radius: 12px; padding: 24px; margin-bottom: 20px; }
+    h1, h2 { line-height: 1.25; } h1 { margin-top: 0; } h2 { font-size: 1.25rem; }
+    .date { color: #58657d; } .table-scroll { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    th, td { padding: 10px; text-align: left; border-bottom: 1px solid #e2e7ef; }
+    th { background: #f1f4f9; } td:nth-child(n+3) { text-align: right; font-variant-numeric: tabular-nums; }
+    pre { overflow: auto; max-height: 350px; font-size: 0.8rem; padding: 14px; background: #f1f4f9; }
+    a { color: #1e54a5; } code { background: #f1f4f9; padding: 2px 4px; }
+    @media print { body { margin: 0; padding: 0; background: white; } section, header { border: 0; } details { display: none; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>SHA3-256 и получение ключа шифрования</h1>
+    <p>Общий секрет MQV → байты фиксированной длины → SHA3-256 → первые {{KEY_LENGTH}} байт</p>
+    <p class="date">Локальное время формирования: {{DATE}}</p>
+  </header>
+  <section><h2>Условия эксперимента</h2>{{ENVIRONMENT}}</section>
+  <section>
+    <h2>Формат и границы измерений</h2>
+    <p>Секрет записывается как беззнаковое число старшим байтом вперёд, без знакового байта
+      BigInteger, с нулями слева до ceil(bitLength(p) / 8) байт. Строки и hex не используются.</p>
+    <p>SHA3-256 использует стандартный MessageDigest Java 17. Его объект и провайдер подготавливаются
+      до замеров; каждый digest обрабатывает целое сообщение, возвращает новый массив и сбрасывает состояние.</p>
+    <p>Измерены три математические операции MQV, кодирование секрета, хеширование готовых байтов,
+      полное получение ключа из готового секрета и цепочка «вычисление секрета MQV + получение ключа».</p>
+    <p>Подготовка подгруппы, долговременных ключей и подписанного справочника, проверка подписи,
+      подготовка входных обменов, файлы и вывод находятся вне измеренных интервалов.
+      Полная цепочка в таблице начинается с уже подготовленных ключей и проверенных открытых данных.</p>
+    <p>Циклы серии делятся на число операций. Служебные затраты не вычитаются.
+      Это учебное измерение одной JVM с влиянием JIT, сборки мусора и системного счётчика.</p>
+  </section>
+  <section>
+    <h2>Результаты из CSV</h2>
+    <div class="table-scroll"><table>
+      <thead><tr><th>Алгоритм</th><th>Этап</th><th>Медиана, цикл/оп.</th><th>Среднее, цикл/оп.</th>
+        <th>Минимум, цикл/оп.</th><th>Максимум, цикл/оп.</th></tr></thead>
+      <tbody>{{ROWS}}</tbody>
+    </table></div>
+    <p>Пустая операция тем же способом: {{OVERHEAD}} цикл/операцию по медиане.</p>
+  </section>
+  <section><h2>Сопоставление стоимости</h2>{{CONCLUSION}}</section>
+  <section>
+    <h2>Исходные данные</h2>
+    <p><a href="measurements.csv" download>Скачать measurements.csv</a>. Поле <code>cycles</code>
+      содержит циклы всей серии из <code>operations</code> операций. Секреты и ключи в отчёт не записываются.</p>
+    <details><summary>Показать копию CSV</summary><pre>{{RAW_CSV}}</pre></details>
+    <p>Документация: <a href="https://docs.oracle.com/en/java/javase/17/security/oracle-providers.html">провайдеры Java 17</a>,
+      <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/security/MessageDigest.html">MessageDigest</a>.</p>
+  </section>
+</body>
+</html>
