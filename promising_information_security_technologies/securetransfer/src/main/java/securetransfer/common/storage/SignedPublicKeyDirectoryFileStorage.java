@@ -98,7 +98,9 @@ public final class SignedPublicKeyDirectoryFileStorage {
             SignedPublicKeyDirectory signedDirectory = SignedPublicKeyDirectory.fromProperties(directoryProperties);
             return signedDirectory.verifySignatureAndGetPublicKeys(subgroupParameters, trustedAuthorityPublicKey);
         } catch (IllegalArgumentException invalidDirectoryException) {
-            throw new IOException("Некорректный справочник MQV: " + directoryFilePath, invalidDirectoryException);
+            throw new IOException("Некорректный справочник MQV: "
+                    + directoryFilePath.toAbsolutePath().normalize()
+                    + ". Причина: " + invalidDirectoryException.getMessage(), invalidDirectoryException);
         }
     }
 
