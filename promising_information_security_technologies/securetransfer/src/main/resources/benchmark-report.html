@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SecureTransfer — сравнение DH и MQV</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #172b43;
+      --muted: #596b7f;
+      --line: #dde5ee;
+      --accent: #245c9d;
+      --paper: #fff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #f3f6fa;
+      color: var(--ink);
+      font: 15px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    }
+    main { max-width: 1200px; margin: auto; padding: 42px 28px 36px; }
+    header { margin-bottom: 28px; }
+    .eyebrow { color: var(--accent); font-size: 12px; font-weight: 700; letter-spacing: .1em; }
+    h1 { font-size: clamp(27px, 4vw, 40px); line-height: 1.2; margin: 10px 0 14px; letter-spacing: -.03em; }
+    h2 { font-size: 21px; line-height: 1.3; margin: 0 0 14px; }
+    h3 { font-size: 16px; margin: 22px 0 8px; }
+    p { margin: 8px 0 14px; }
+    a { color: var(--accent); text-underline-offset: 3px; }
+    .muted, footer { color: var(--muted); }
+    .actions { display: flex; gap: 12px; flex-wrap: wrap; margin: 20px 0; }
+    .button {
+      display: inline-block; border: 1px solid #bccde0; border-radius: 8px;
+      padding: 8px 15px; background: white; font: inherit; color: var(--accent); cursor: pointer;
+    }
+    .button.primary { background: var(--accent); color: white; border-color: var(--accent); }
+    .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 24px 0; }
+    .card, section { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; }
+    .card { padding: 16px 20px; }
+    .card strong { display: block; font-size: 27px; line-height: 1.3; }
+    .card span { color: var(--muted); font-size: 13px; }
+    section { padding: 25px; margin-bottom: 18px; }
+    .table-scroll { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    caption { text-align: left; color: var(--muted); padding: 0 0 14px; }
+    th, td { padding: 12px 11px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    thead th { background: #edf2f8; color: #45586f; font-weight: 600; }
+    .numeric { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .median { font-weight: 700; }
+    .best { background: #edf7f1; color: #216246; }
+    tbody tr:last-child td { border-bottom: 0; }
+    .note { padding: 13px 16px; background: #f0f4fa; border-left: 3px solid #9db7d5; border-radius: 4px; }
+    .conclusions { padding-left: 23px; }
+    .conclusions li { margin-bottom: 14px; padding-left: 5px; }
+    .metadata { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px 28px; margin: 0; }
+    .metadata div { min-width: 0; }
+    dt { color: var(--muted); font-size: 13px; }
+    dd { margin: 3px 0 0; overflow-wrap: anywhere; }
+    code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .9em; }
+    pre {
+      white-space: pre; overflow: auto; max-height: 380px; background: #f5f7fa;
+      border: 1px solid var(--line); border-radius: 6px; padding: 14px; font-size: 12px;
+    }
+    summary { cursor: pointer; font-weight: 600; padding: 8px 0; }
+    footer { margin-top: 25px; font-size: 12px; }
+    @media (max-width: 720px) {
+      main { padding: 24px 14px; }
+      section { padding: 18px 14px; }
+      .cards, .metadata { grid-template-columns: repeat(2, 1fr); }
+      .card { padding: 13px; }
+      table { min-width: 820px; }
+    }
+    @media print {
+      body { background: white; font-size: 11px; }
+      main { padding: 0; max-width: none; }
+      .actions, .raw-data { display: none; }
+      section { border-radius: 0; padding: 15px 0; border-width: 0 0 1px; }
+      .cards { margin: 12px 0; }
+      th, td { padding: 7px; font-size: 10px; }
+      .table-scroll { overflow: visible; }
+      table { min-width: 0; }
+      h2 { break-after: avoid; }
+      tr, .metadata div { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">SECURETRANSFER · ЛАБОРАТОРНАЯ РАБОТА 1 · ПУНКТ 20</div>
+    <h1>Сравнение вычислений DH и MQV</h1>
+    <p class="muted">Повторные измерения основных этапов одного участника после прогрева JVM.
+      Единица сравнения — процессорные циклы на операцию.</p>
+    <p class="muted">Сформирован {{REPORT_DATE}}</p>
+    <div class="actions">
+      <a class="button primary" href="measurements.csv" download>Исходные замеры · CSV</a>
+      <button class="button" type="button" onclick="window.print()">Печать / PDF</button>
+      <a class="button" href="#conclusions">К выводам</a>
+    </div>
+  </header>
+
+  <div class="cards">
+    <div class="card"><strong>{{ALGORITHM_COUNT}}</strong><span>алгоритма</span></div>
+    <div class="card"><strong>{{STAGE_COUNT}}</strong><span>измеренных этапов</span></div>
+    <div class="card"><strong>{{MEASUREMENT_COUNT}} × {{BATCH_SIZE}}</strong><span>серий × операций на этап</span></div>
+    <div class="card"><strong>{{MODULUS_BITS}} / {{SUBGROUP_BITS}}</strong><span>бит p / q подгруппы</span></div>
+  </div>
+
+  <section aria-labelledby="results-heading">
+    <h2 id="results-heading">Результаты по этапам</h2>
+    <div class="table-scroll">
+      <table>
+        <caption>Все числа — циклы на операцию. Подсвечена минимальная медиана для каждого этапа в этом запуске.</caption>
+        <thead><tr>
+          <th scope="col">Алгоритм</th><th scope="col">Этап</th>
+          <th class="numeric" scope="col">Медиана</th><th class="numeric" scope="col">Среднее</th>
+          <th class="numeric" scope="col">Минимум</th><th class="numeric" scope="col">Максимум</th>
+        </tr></thead>
+        <tbody>{{RESULT_ROWS}}</tbody>
+      </table>
+    </div>
+    <p class="muted">Статистика относится к стоимости серий, делённой на число операций в серии.
+      Минимум и максимум описывают серии целиком, а не отдельные вызовы.</p>
+    <div class="note">{{OVERHEAD_DESCRIPTION}}</div>
+  </section>
+
+  <section id="conclusions" aria-labelledby="conclusions-heading">
+    <h2 id="conclusions-heading">Выводы по этому запуску</h2>
+    <ol class="conclusions">{{CONCLUSIONS}}</ol>
+    <p class="note">Результаты относятся к указанной машине, счётчику и размерам чисел.
+      По одному запуску статистическая значимость различий не устанавливается.</p>
+  </section>
+
+  <section aria-labelledby="conditions-heading">
+    <h2 id="conditions-heading">Условия измерений</h2>
+    <dl class="metadata">{{RUN_METADATA}}</dl>
+    <h3>Что входит в замеры</h3>
+    <p>Случайный выбор секретного ключа, вычисление открытого ключа и вычисление общего секрета
+      измерены раздельно. В MQV измеряются временные ключи и сеансовый секрет.
+      DH в подгруппе и MQV используют одну подгруппу.</p>
+    <p>Параметры групп, входные ключи, долговременные пары MQV, подпись справочника и её проверка
+      подготавливаются заранее. Недопустимые временные пары MQV отбрасываются при подготовке.
+      Совпадение секретов участников проверяется до измеряемого этапа.</p>
+    <p>Сеть, файлы, валидация параметров, консольный вывод и финальное хэширование в замеры не входят.
+      Показания включают чтение счётчика, вызов операции, цикл серии и сохранение результатов.
+      Все результаты используются после второго чтения счётчика.</p>
+    <p class="muted">Фиксированный прогрев не гарантирует установившуюся производительность JVM.
+      Сборка мусора, фоновая нагрузка и изменение частоты CPU могут влиять на разброс.
+      Этот отчёт не измеряет длительность полного сетевого сеанса.</p>
+  </section>
+
+  <section class="raw-data" aria-labelledby="data-heading">
+    <h2 id="data-heading">Данные для пересчёта</h2>
+    <p>Таблица и выводы построены чтением файла <a href="measurements.csv">measurements.csv</a>.
+      В нём {{CSV_ROW_COUNT}} записей: исходные циклы каждой серии и отдельные служебные замеры.</p>
+    <p><code>cycles / operations</code> — циклы на операцию.
+      Нумерация <code>measurement_index</code> начинается с 1 для каждого этапа.
+      Строки <code>overhead</code> содержат пустую операцию, строки <code>stage</code> — вычисления алгоритмов.</p>
+    <details>
+      <summary>Показать копию исходного CSV внутри отчёта</summary>
+      <pre>{{RAW_CSV}}</pre>
+    </details>
+  </section>
+  <footer>SecureTransfer · Все таблицы и оформление включены в HTML. Интернет и веб-сервер не требуются.</footer>
+</main>
+</body>
+</html>
